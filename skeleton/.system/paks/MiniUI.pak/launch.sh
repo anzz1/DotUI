@@ -10,7 +10,8 @@ echo 6 > /sys/class/pwm/pwmchip0/pwm0/duty_cycle
 echo 1 > /sys/class/pwm/pwmchip0/pwm0/enable
 
 # init lcd
-cat /proc/ls
+# cat /proc/ls
+/mnt/SDCARD/.system/bin/l_354 &
 sleep 0.5
 
 # init charger detection
