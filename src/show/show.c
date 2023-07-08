@@ -30,7 +30,7 @@ int main(int argc , char* argv[]) {
 	
 	uint8_t* dst = (uint8_t*)fb0_map; // rgba
 	uint8_t* src = (uint8_t*)img->pixels; // bgr
-	src += ((img->h * img->w) - 1) * 3;
+	//src += ((img->h * img->w) - 1) * 3;
 	for (int y=0; y<img->h; y++) {
 		for (int x=0; x<img->w; x++) {
 			*(dst+0) = *(src+2); // r
@@ -38,7 +38,7 @@ int main(int argc , char* argv[]) {
 			*(dst+2) = *(src+0); // b
 			*(dst+3) = 0xf; // alpha
 			dst += 4;
-			src -= 3;
+			src += 3;
 		}
 	}
 	SDL_FreeSurface(img);
