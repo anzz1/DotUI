@@ -53,7 +53,7 @@ sdl: lib
 core: lib
 	cd ./src/batmon && make
 	cd ./src/keymon && make
-	cd ./src/lumon && make
+	# cd ./src/lumon && make
 	cd ./src/progressui && make
 	cd ./src/miniui && make
 	cd ./src/show && make
@@ -101,7 +101,7 @@ payload:
 	cp ./third-party/libmamedb/libmamedb.so ./build/PAYLOAD/.system/lib/
 	cp ./src/batmon/batmon ./build/PAYLOAD/.system/bin/
 	cp ./src/keymon/keymon ./build/PAYLOAD/.system/bin/
-	cp ./src/lumon/lumon ./build/PAYLOAD/.system/bin/
+	# cp ./src/lumon/lumon ./build/PAYLOAD/.system/bin/
 	cp ./src/progressui/progressui ./build/PAYLOAD/.system/bin/
 	cp ./src/progressui/progress.sh ./build/PAYLOAD/.system/bin/progress
 	cp ./src/miniui/MiniUI ./build/PAYLOAD/.system/paks/MiniUI.pak/
@@ -180,7 +180,7 @@ clean:
 	cd ./third-party/SDL-1.2 && make distclean || :
 	cd ./src/batmon && make clean
 	cd ./src/keymon && make clean
-	cd ./src/lumon && make clean
+	# cd ./src/lumon && make clean
 	cd ./src/progressui && make clean
 	cd ./src/miniui && make clean
 	cd ./src/show && make clean
