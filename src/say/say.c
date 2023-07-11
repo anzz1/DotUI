@@ -16,7 +16,8 @@
 #define kMiniUIFont "/mnt/SDCARD/.system/res/BPreplayBold-unhinted.otf"
 #define kStockFont "/customer/app/BPreplayBold.otf"
 
-static void blit(void* _dst, int dst_w, int dst_h, void* _src, int src_w, int src_h, int ox, int oy) {
+#if 0
+static void blit180(void* _dst, int dst_w, int dst_h, void* _src, int src_w, int src_h, int ox, int oy) {
 	uint8_t* dst = (uint8_t*)_dst;
 	uint8_t* src = (uint8_t*)_src;
 	
@@ -34,6 +35,27 @@ static void blit(void* _dst, int dst_w, int dst_h, void* _src, int src_w, int sr
 				*(dst_row+3) = 0xff;
 			}
 			dst_row -= 4;
+			src_row += 4;
+		}
+	}
+}
+#endif
+static void blit(void* _dst, int dst_w, int dst_h, void* _src, int src_w, int src_h, int ox, int oy) {
+	uint8_t* dst = (uint8_t*)_dst;
+	uint8_t* src = (uint8_t*)_src;
+
+	for (int y=0; y<src_h; y++) {
+		uint8_t* dst_row = dst + ((((oy + y) * dst_w) + ox) * 4);
+		uint8_t* src_row = src + ((y * src_w) * 4);
+		for (int x=0; x<src_w; x++) {
+			float a = *(src_row+3) / 255.0;
+			if (a>0.1) {
+				*(dst_row+0) = *(src_row+0) * a;
+				*(dst_row+1) = *(src_row+1) * a;
+				*(dst_row+2) = *(src_row+2) * a;
+				*(dst_row+3) = 0xff;
+			}
+			dst_row += 4;
 			src_row += 4;
 		}
 	}
