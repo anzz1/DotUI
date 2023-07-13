@@ -63,6 +63,7 @@ core: lib
 	cd ./src/keyboard && make
 	cd ./src/oss && make
 	cd ./src/axpchk && make
+	cd ./src/pwrbtnd && make
 
 emu:
 	cd ./third-party/picoarch && make platform=miyoomini -j
@@ -113,6 +114,7 @@ payload:
 	cp ./src/keyboard/keyboard ./build/PAYLOAD/.system/bin/
 	cp ./src/oss/oss ./build/PAYLOAD/.system/bin/
 	cp ./src/axpchk/axpchk ./build/PAYLOAD/.system/bin/
+	cp ./src/pwrbtnd/pwrbtnd ./build/PAYLOAD/.system/bin/
 	cp ./src/say/say ./build/PAYLOAD/miyoo354/app/
 	cp ./src/blank/blank ./build/PAYLOAD/miyoo354/app/
 	cp ./third-party/minizip/miniunz ./build/PAYLOAD/miyoo354/app/
@@ -193,6 +195,7 @@ clean:
 	cd ./src/keyboard && make clean
 	cd ./src/oss && make clean
 	cd ./src/axpchk && make clean
+	cd ./src/pwrbtnd && make clean
 	cd ./third-party/deps && ./make-deps.sh clean
 	cd ./third-party/minizip && make clean
 	cd ./third-party/libmamedb && make clean
