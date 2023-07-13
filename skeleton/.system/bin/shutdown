@@ -37,6 +37,8 @@ if [ "$0" = "/tmp/_shutdown" ]; then
 		sync
 		if [ "$1" = "-r" ]; then
 			reboot
+		elif [ "$MIYOO_DEV" == "283" ]; then
+			reboot -f
 		else
 			poweroff
 		fi

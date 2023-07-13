@@ -3,22 +3,47 @@
 
 /mnt/SDCARD/.system/bin/blank
 
+# get device model
+if [ -f /customer/app/axp_test ]; then
+	export MIYOO_FW=354
+	if /mnt/SDCARD/.system/bin/axpchk; then
+		export MIYOO_DEV=354
+	else
+		export MIYOO_DEV=283
+	fi
+else
+	export MIYOO_FW=283
+	export MIYOO_DEV=283
+fi
+
 # init backlight
 echo 0 > /sys/class/pwm/pwmchip0/export
 echo 800 > /sys/class/pwm/pwmchip0/pwm0/period
 echo 6 > /sys/class/pwm/pwmchip0/pwm0/duty_cycle
 echo 1 > /sys/class/pwm/pwmchip0/pwm0/enable
 
-# init lcd
-# cat /proc/ls
-/mnt/SDCARD/.system/bin/l_354 &
-sleep 0.5
-
-# init charger detection
-if [ ! -f /sys/devices/gpiochip0/gpio/gpio59/direction ]; then
-	echo 59 > /sys/class/gpio/export
-	echo in > /sys/devices/gpiochip0/gpio/gpio59/direction
+if [ "$MIYOO_DEV" == "283" ]; then
+	# init charger detection
+	if [ ! -f /sys/devices/gpiochip0/gpio/gpio59/direction ]; then
+		echo 59 > /sys/class/gpio/export
+		echo in > /sys/devices/gpiochip0/gpio/gpio59/direction
+	fi
+	if [ "$MIYOO_FW" == "354" ]; then
+		# init power btn detection
+		if [ ! -f /sys/devices/gpiochip0/gpio/gpio86/direction ]; then
+			echo 86 > /sys/class/gpio/export
+			echo in > /sys/devices/gpiochip0/gpio/gpio86/direction
+		fi
+		/mnt/SDCARD/.system/bin/pwrbtnd &
+	fi
+	# init lcd
+	/mnt/SDCARD/.system/bin/l_283 &
+else
+	# init lcd
+	# cat /proc/ls
+	/mnt/SDCARD/.system/bin/l_354 &
 fi
+sleep 0.5
 
 export SDCARD_PATH=/mnt/SDCARD
 export BIOS_PATH=/mnt/SDCARD/Bios
@@ -48,9 +73,16 @@ fi
 # csc [dev] [cscMatrix] [contrast] [hue] [luma] [saturation] [sharpness] [gain]
 echo csc 0 3 50 50 45 45 0 0 > /proc/mi_modules/mi_disp/mi_disp0
 
-CHARGING=`/customer/app/axp_test | awk -F'[,: {}]+' '{print $7}'`
-if [ "$CHARGING" == "3" ]; then
-	batmon
+if [ "$MIYOO_DEV" == "283" ]; then
+	CHARGING=$(cat /sys/devices/gpiochip0/gpio/gpio59/value)
+	if [ "$CHARGING" == "1" ]; then
+		batmon
+	fi
+else
+	CHARGING=$(/customer/app/axp_test | awk -F'[,: {}]+' '{print $7}')
+	if [ "$CHARGING" == "3" ]; then
+		batmon
+	fi
 fi
 
 keymon &
@@ -87,7 +119,7 @@ cd $(dirname "$0")
 EXEC_PATH=/tmp/miniui_exec
 touch "$EXEC_PATH"  && sync
 
-MIYOO_VERSION=`/etc/fw_printenv miyoo_version`
+MIYOO_VERSION=$(/etc/fw_printenv miyoo_version)
 export MIYOO_VERSION=${MIYOO_VERSION#miyoo_version=}
 
 # Battery level debug info
@@ -105,7 +137,7 @@ while [ -f "$EXEC_PATH" ]; do
 
 	NEXT="/tmp/next"
 	if [ -f $NEXT ]; then
-		CMD=`cat $NEXT`
+		CMD=$(cat $NEXT)
 		eval $CMD
 		rm -f $NEXT
 		if [ -f "/tmp/using-swap" ]; then
@@ -120,5 +152,5 @@ done
 
 shutdown
 while true; do
-	sync && poweroff && sleep 10
+	sync && reboot -f && sleep 10
 done
