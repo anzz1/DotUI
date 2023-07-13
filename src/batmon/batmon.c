@@ -32,7 +32,7 @@ void screenOff(void) {
 }
 
 static volatile int is_charging = 1;
-void checkCharging(void) {
+void checkCharging_MMP(void) {
 	// Code adapted from OnionOS
 	char *cmd = "cd /customer/app/ ; ./axp_test";  
 	int batJsonSize = 100;
@@ -47,11 +47,26 @@ void checkCharging(void) {
 	}
 	pclose(fp);   
 }
+void checkCharging_MM(void) {
+	int i = 0;
+	FILE *file = fopen("/sys/devices/gpiochip0/gpio/gpio59/value", "r");
+	if (file) {
+		fscanf(file, "%d", &i);
+		fclose(file);
+	}
+	is_charging = i;
+}
 static pthread_t charging_pt;
-void* chargingThread(void* arg) {
+void* chargingThread_MMP(void* arg) {
 	while (1) {
 		sleep(1);
-		checkCharging();
+		checkCharging_MMP();
+	}
+}
+void* chargingThread_MM(void* arg) {
+	while (1) {
+		sleep(1);
+		checkCharging_MM();
 	}
 }
 
@@ -64,10 +79,14 @@ void* inputThread(void* arg) {
 		if (event.type!=EV_KEY || event.value>1) continue;
 		if (event.type==EV_KEY) screenOn();
 		if (event.code==KEY_POWER) launch = 1;
-	}	
+	}
+	return 0;
 }
 
 int main(void) {
+	const char* model = getenv("MIYOO_DEV");
+	int mmplus = (!model || strcmp(model, "283"));
+
 	int fb0_fd = open("/dev/fb0", O_RDWR);
 	struct fb_var_screeninfo vinfo;
 	ioctl(fb0_fd, FBIOGET_VSCREENINFO, &vinfo);
@@ -100,14 +119,15 @@ int main(void) {
 	input_fd = open("/dev/input/event0", O_RDONLY);
 	pthread_create(&input_pt, NULL, &inputThread, NULL);
 
-	pthread_create(&charging_pt, NULL, &chargingThread, NULL);
+	pthread_create(&charging_pt, NULL, mmplus ? &chargingThread_MMP : &chargingThread_MM, NULL);
 
 	while (!launch && is_charging) {
 		unsigned long t = SDL_GetTicks()-screen_start;
 		if (screen_on) {
 			if (t>=10000) screenOff(); // Dim screen after 10 sec
 		}
-		else if (t>=30000) break; // Shutdown after 30 sec (MMP can charge while off)
+		else if (mmplus && t>=30000) break; // Shutdown after 30 sec (MMP can charge while off)
+		usleep(200000);
 	}
 
 	memset(fb0_map, 0, map_size); // clear screen
