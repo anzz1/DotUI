@@ -38,10 +38,14 @@ static char SettingsPath[256];
 static int shm_fd = -1;
 static int is_host = 0;
 static int shm_size = sizeof(Settings);
+static int mmplus = 1;
 
 void InitSettings(void) {
+	const char* model = getenv("MIYOO_DEV");
+	if (model && !strcmp(model, "283")) mmplus = 0;
+
 	sprintf(SettingsPath, "%s/msettings.bin", getenv("USERDATA_PATH"));
-	
+
 	shm_fd = shm_open(SHM_KEY, O_RDWR | O_CREAT | O_EXCL, 0644); // see if it exists
 	if (shm_fd==-1 && errno==EEXIST) { // already exists
 		puts("Settings client");
@@ -102,13 +106,17 @@ void SetBrightness(int value) {
 }
 
 int GetVolume(void) { // 0-20
-	return settings->speaker;
+	return (mmplus ? settings->speaker : 20);
 }
 void SetVolume(int value) {
-	int raw = -60 + value * 3;
-	SetRawVolume(raw);
-	settings->speaker = value;
-	SaveSettings();
+	if (mmplus) {
+		int raw = -60 + value * 3;
+		SetRawVolume(raw);
+		settings->speaker = value;
+		SaveSettings();
+	} else {
+		SetRawVolume(0);
+	}
 }
 
 void SetRawBrightness(int val) {
