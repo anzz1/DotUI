@@ -54,19 +54,18 @@
 #endif
 
 //	Global Variables
-//typedef struct {
-//	int channel_value;
-//	int adc_value;
-//} SAR_ADC_CONFIG_READ;
+typedef struct {
+	int channel_value;
+	int adc_value;
+} SAR_ADC_CONFIG_READ;
 
-//#define SARADC_IOC_MAGIC                     'a'
-//#define IOCTL_SAR_INIT                       _IO(SARADC_IOC_MAGIC, 0)
-//#define IOCTL_SAR_SET_CHANNEL_READ_VALUE     _IO(SARADC_IOC_MAGIC, 1)
+#define SARADC_IOC_MAGIC                     'a'
+#define IOCTL_SAR_INIT                       _IO(SARADC_IOC_MAGIC, 0)
+#define IOCTL_SAR_SET_CHANNEL_READ_VALUE     _IO(SARADC_IOC_MAGIC, 1)
 
-//static SAR_ADC_CONFIG_READ  adc_config = {0,0};
-//static int is_charging = 0;
-//static int eased_charge = 0;
-//static int sar_fd = 0;
+static SAR_ADC_CONFIG_READ adc_config = {0,0};
+static int sar_fd = 0;
+
 static struct input_event	ev;
 static int input_fd = 0;
 static int bat_fd = 0;
@@ -79,18 +78,29 @@ void touch(const char* path) {
 	close(open(path, O_RDWR|O_CREAT, 0777));
 }
 
-void quit(int exitcode) {
+static void quit(int exitcode) {
 	pthread_cancel(adc_pt);
 	pthread_join(adc_pt, NULL);
 	QuitSettings();
 
 	if (input_fd > 0) close(input_fd);
-	//if (sar_fd > 0) close(sar_fd);
+	if (sar_fd > 0) close(sar_fd);
 	if (bat_fd > 0) close(bat_fd);
 	exit(exitcode);
 }
 
-void checkAXP() {
+static void writeBatt(int value, int is_charging) {
+	char str[4];
+	sprintf(str, "%d", value);
+	write(bat_fd, str, (value == 100 ? 3 : (value >= 10 ? 2 : 1)));
+	lseek(bat_fd, 0, 0);
+	if (exists("/tmp/charging")) {
+		if (!is_charging) unlink("/tmp/charging");
+	} else if (is_charging) {
+		touch("/tmp/charging");
+	}
+}
+static void checkAXP() {
 	// Code adapted from OnionOS
 	const char *cmd = "cd /customer/app/ ; ./axp_test";
 	FILE *fp;
@@ -98,22 +108,42 @@ void checkAXP() {
 	if (fp) {
 		int battery_number = 0;
 		int charge_number = 0;
-		if (fscanf(fp, "{\"battery\":%d, \"voltage\":%*d, \"charging\":%d}", &battery_number, &charge_number) == 2 &&
-				battery_number <= 100) {
-			char value[4];
-			sprintf(value, "%d", battery_number);
-			write(bat_fd, value, (battery_number == 100 ? 3 : (battery_number >= 10 ? 2 : 1)));
-			lseek(bat_fd, 0, 0);
-			if (exists("/tmp/charging")) {
-				if (charge_number != 3) {
-					unlink("/tmp/charging");
-				}
-			} else if (charge_number == 3) {
-				touch("/tmp/charging");
-			}
+		if (fscanf(fp, "{\"battery\":%d, \"voltage\":%*d, \"charging\":%d}", &battery_number, &charge_number) == 2 && battery_number <= 100) {
+			writeBatt(battery_number, (charge_number == 3));
 		}
 		pclose(fp);
 	}
+}
+
+static void initADC(void) {
+	sar_fd = open("/dev/sar", O_WRONLY);
+	ioctl(sar_fd, IOCTL_SAR_INIT, NULL);
+}
+static void checkADC(void) {
+	ioctl(sar_fd, IOCTL_SAR_SET_CHANNEL_READ_VALUE, &adc_config);
+
+	int current_charge = 0;
+	if (adc_config.adc_value>=528) {
+		current_charge = adc_config.adc_value - 478;
+	}
+	else if (adc_config.adc_value>=512){
+		current_charge = adc_config.adc_value * 2.125 - 1068;
+	}
+	else if (adc_config.adc_value>=480){
+		current_charge = adc_config.adc_value * 0.51613 - 243.742;
+	}
+
+	if (current_charge<0) current_charge = 0;
+	else if (current_charge>100) current_charge = 100;
+
+	int charging = 0;
+    FILE *fp = fopen("/sys/devices/gpiochip0/gpio/gpio59/value", "r");
+    if (fp) {
+        fscanf(fp, "%d", &charging); 
+        fclose(fp);
+    }
+
+	writeBatt(current_charge, charging);
 }
 
 static void* runAXP(void *arg) {
@@ -124,11 +154,28 @@ static void* runAXP(void *arg) {
 	return 0;
 }
 
+static void* runADC(void *arg) {
+	while(1) {
+		sleep(1);
+		checkADC();
+	}
+	return 0;
+}
+
 int main (int argc, char *argv[]) {
 	bat_fd = open("/tmp/battery", O_CREAT | O_WRONLY | O_TRUNC, 0666);
 	if (bat_fd < 0) ERROR("Failed to open /tmp/battery");
-	checkAXP();
-	pthread_create(&adc_pt, NULL, &runAXP, NULL);
+
+	const char* model = getenv("MIYOO_DEV");
+	int mmplus = (!model || strcmp(model, "283"));
+	if (mmplus) {
+		checkAXP();
+		pthread_create(&adc_pt, NULL, &runAXP, NULL);
+	} else {
+		initADC();
+		checkADC();
+		pthread_create(&adc_pt, NULL, &runADC, NULL);
+	}
 
 	// Set Initial Volume / Brightness
 	InitSettings();
@@ -157,6 +204,8 @@ int main (int argc, char *argv[]) {
 				button_flag = button_flag & (~START) | (val<<START_BIT);
 			} 
 			break;
+		case BUTTON_R1:
+			if (mmplus) break;
 		case BUTTON_VOLUP:
 			if ( val == REPEAT ) {
 				// Adjust repeat speed to 1/2
@@ -176,6 +225,8 @@ int main (int argc, char *argv[]) {
 				}
 			}
 			break;
+		case BUTTON_L1:
+			if (mmplus) break;
 		case BUTTON_VOLDOWN:
 			if ( val == REPEAT ) {
 				// Adjust repeat speed to 1/2
