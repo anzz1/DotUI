@@ -76,7 +76,10 @@ fi
 rm -rf "$OLD_SYSTEM_PATH"
 rm -rf /tmp/MainUI.old
 mv MainUI /tmp/MainUI.old
+rm -rf /tmp/MainUI_283.old
+mv /mnt/SDCARD/miyoo/MainUI /tmp/MainUI_283.old
 rm -rf /mnt/SDCARD/miyoo354
+rm -rf /mnt/SDCARD/miyoo
 sync
 
 # } > /mnt/SDCARD/miyoo.txt 2>&1

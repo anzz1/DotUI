@@ -90,6 +90,7 @@ payload:
 	cp -R ./skeleton/. ./build/PAYLOAD
 	cp -R ./extras/. ./build/EXTRAS
 	mv ./build/PAYLOAD/miyoo354/app/keymon.sh ./build/PAYLOAD/miyoo354/app/keymon
+	cp ./build/PAYLOAD/miyoo354/app/keymon ./build/PAYLOAD/miyoo/app/keymon
 	cd ./build && find . -type f -name '.keep' -delete
 	cd ./build && find . -type f -name '.DS_Store' -delete
 	cp ./src/libmsettings/libmsettings.so ./build/PAYLOAD/.system/lib/
@@ -171,7 +172,7 @@ zip:
 	cp ./commits.txt ./build/PAYLOAD/.system/paks/MiniUI.pak
 	cd ./build/PAYLOAD && zip -r MiniUI.zip .system .tmp_update
 	mv ./build/PAYLOAD/MiniUI.zip ./build/PAYLOAD/miyoo354/app/
-	cd ./build/PAYLOAD && zip -r ../../releases/$(RELEASE_NAME)-base.zip Bios Roms Saves miyoo354 README.txt
+	cd ./build/PAYLOAD && zip -r ../../releases/$(RELEASE_NAME)-base.zip Bios Roms Saves miyoo354 miyoo README.txt
 	cd ./build/EXTRAS && zip -r ../../releases/$(RELEASE_NAME)-extras.zip Bios Emus Roms Saves Tools README.txt
 	echo "$(RELEASE_NAME)" > ./build/latest.txt
 

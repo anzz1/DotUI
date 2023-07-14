@@ -59,8 +59,8 @@ export DATETIME_PATH=$USERDATA_PATH/.miniui/datetime.txt # used by bin/shutdown
 # killall tee # NOTE: killing tee is somehow responsible for audioserver crashes
 rm -f "$SDCARD_PATH/update.log"
 
-export LD_LIBRARY_PATH="/mnt/SDCARD/.system/lib:$LD_LIBRARY_PATH"
-export PATH="/mnt/SDCARD/.system/bin:$PATH"
+export LD_LIBRARY_PATH="/mnt/SDCARD/.system/lib:/lib:/config/lib:/customer/lib"
+export PATH="/mnt/SDCARD/.system/bin:/bin:/sbin:/usr/bin:/usr/sbin:/config:/customer/app"
 
 # NOTE: could cause performance issues on more demanding cores...maybe?
 if [ -f /customer/lib/libpadsp.so ]; then
