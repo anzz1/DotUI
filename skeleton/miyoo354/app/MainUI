@@ -6,7 +6,7 @@ update_fail() {
 	read -n1 < /dev/input/event0
 	sleep 1
 	while true; do
-		sync && poweroff && sleep 10
+		sync && poweroff && sleep 5 && reboot -f && sleep 10
 	done
 }
 
